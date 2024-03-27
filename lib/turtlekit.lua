@@ -1,21 +1,43 @@
 local m = {}
 
-local printDebug = false
+local shouldPrintDebug = true
 
 -- log functions
 local printInfo
 local printDebug
-printInfo = print
 
+printInfo = print
 printDebug = function(msg)
-    if not printDebug then return end
+    if not shouldPrintDebug then return end
+
     term.setTextColor(colors.yellow)
     print("[debug] " .. msg)
     term.setTextColor(colors.white)
 end
 
-function m.setPrintInfo(handler)
-    printInfo = handler
+local function defaultRequestFunction(name)
+    term.clear()
+    term.setCursorPos(1,1)
+
+    if (name==nil) then
+        printInfo("Waiting for block")
+        return
+    end
+
+    printInfo("Waiting for " .. name)
+end
+
+-- api util functions
+function m.setPrintDebugFunction(fn)
+    printDebug = fn
+end
+
+function m.setPrintInfo(fn)
+    printInfo = fn
+end
+
+function m.setRequestFunction(fn)
+    defaultRequestFunction = fn
 end
 
 -- terminal functions
@@ -169,66 +191,51 @@ function m.countItems(name)
     return count
 end
 
-function m.waitForItem(name, count)
-    local slot = 0
-    printInfo("waiting for " .. name)
-    os.pullEvent("turtle_inventory")
-    while not found do
-        for i = 1,16 do
-            local item = turtle.getItemDetail(i)
-            if item and item.name and item.name==name then
-                slot = i
-                found = true
-                break
-            end
-        end
-        sleep(0)
-    end
-
-    return slot
-end
-
-function m.findItem(name, shouldRequest)
+function m.findItem(name)
     -- search for item in inventory and select
     -- name: item to search for
-    -- shouldRequest: ask user for item if not found
-    -- returns boolean found: true if found, false if not
+    -- returns boolean, number: found, slot
 
-    if shouldRequest==nil then shouldRequest = true end
-    local found = false
-    local slot = -1
-
-    -- search for item
     for i = 1,16 do
         local item = turtle.getItemDetail(i)
         if item and item.name and item.name==name then
-            slot = i
-            found = true
-            break
+            return true, i
         end
     end
 
-    -- item not found, request from user
-    if shouldRequest and not found then
-        slot = m.waitForItem(name, 1)
-        found = true
-    end
+    return false, -1
+end
 
-    -- item not found, cannot request, select empty slot or first
-    if not shouldRequest and not found then
-        slot = m.findEmptySlot()
-        if slot==-1 then
-            slot = 1
+function m.requestItem(name, requestFunction)
+    requestFunction = requestFunction or defaultRequestFunction
+
+    -- intial request
+    requestFunction()
+
+    local done = false
+    while not done do
+        os.pullEvent("turtle_inventory")
+
+        local found, slotNumber = m.findItem(name)
+        if (not found) then
+            requestFunction(name)
+        else
+            turtle.select(slotNumber)
+            done = true
         end
     end
-
-    turtle.select(slot)
-    return found
 end
 
 -- replace functions
 local function replaceHandler(block, placeFunction, digFunction)
-    m.findItem(block)
+    local found, slot = m.findItem(block)
+
+    if not found then
+        m.requestItem(block)
+    else
+        turtle.select(slot)
+    end
+
     while not placeFunction() do
         digFunction()
     end
@@ -248,6 +255,9 @@ end
 m.dig = turtle.dig
 m.digUp = turtle.digUp
 m.digDown = turtle.digDown
+m.place = turtle.place
+m.placeDown = turtle.placeDown
+m.placeUp = turtle.placeUp
 
 -- move functions
 local function forceMoveHandler(n, tMoveHandler, digHandler)

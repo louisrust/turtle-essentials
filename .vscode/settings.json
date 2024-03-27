@@ -6,7 +6,8 @@
         "shell",
         "fs",
         "term",
-        "read"
+        "read",
+        "colors"
     ],
     "Lua.diagnostics.disable": [
         "undefined-field"

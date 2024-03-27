@@ -18,7 +18,15 @@ local function calculateFuelUsage()
     return fuelRunning + fuelBack
 end
 
+local function printStatus()
+    term.clear()
+    term.setCursorPos(1,1)
+    tk.printInfo("Using " .. block)
+    tk.printInfo("Fuel: " .. turtle.getFuelLevel())
+end
+
 local function run()
+    printStatus()
     -- middle col
     tk.dig()
     tk.forward()

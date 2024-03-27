@@ -20,6 +20,7 @@ dlFile("installer.lua")
 dlFile("lib/turtlekit.lua")
 dlFile("safetunnel.lua")
 dlFile("lavaRefuel.lua")
+dlFile("quicktunnel.lua")
 
 term.clear()
 term.setCursorPos(1,1)
